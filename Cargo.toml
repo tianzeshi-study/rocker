@@ -7,5 +7,6 @@ edition = "2021"
 
 [dependencies]
 clap = {version = "4.5.17", features = ["derive", "env", "wrap_help"] }
+futures = "0.3.30"
 shiplift = "0.7.0"
 tokio = { version = "1.40.0", features = ["macros", "rt-multi-thread"] }
