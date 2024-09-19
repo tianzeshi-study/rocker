@@ -2,7 +2,7 @@ mod container;
 mod image;
 
 use shiplift::{Docker, PullOptions, tty::TtyChunk};
-use clap::{Parser, Subcommand, ArgAction};
+use clap::{Parser, Subcommand};
 use futures::StreamExt;
 // use std::env;
 
@@ -52,12 +52,21 @@ enum DockerCommand {
 
     /// Remove one or more containers
     Rm {
+        /// Container ID or name
+        container: String,
+        
         /// Force the removal of a running container
         #[arg(short, long)]
         force: bool,
-
-        /// Container ID or name
-        container: String,
+        
+        
+        /// Remove the specified link
+        #[arg(short, long)]
+        link: Option<String>,
+        
+        /// Remove anonymous volumes associated with the container                                      
+        #[arg(short, long)]
+        volumes: Option<String>,
     },
 
     /// Pull an image or a repository from a registry
@@ -114,125 +123,18 @@ enum DockerCommand {
         #[arg(required = true)]
         path_or_url: String,
 
-        /// Add a custom host-to-IP mapping (host:ip)
-        #[arg(long, value_name = "list")]
-        add_host: Option<Vec<String>>,
-
-        /// Set build-time variables
-        #[arg(long, value_name = "list")]
-        build_arg: Option<Vec<String>>,
-
-        /// Images to consider as cache sources
-        #[arg(long, value_name = "strings")]
-        cache_from: Option<Vec<String>>,
-
-        /// Optional parent cgroup for the container
-        #[arg(long, value_name = "string")]
-        cgroup_parent: Option<String>,
-
-        /// Compress the build context using gzip
-        #[arg(long, action = ArgAction::SetTrue)]
-        compress: bool,
-
-        /// Limit the CPU CFS period
-        #[arg(long, value_name = "int")]
-        cpu_period: Option<u64>,
-
-        /// Limit the CPU CFS quota
-        #[arg(long, value_name = "int")]
-        cpu_quota: Option<u64>,
-
-        /// CPU shares (relative weight)
-        #[arg(short = 'c', long, value_name = "int")]
-        cpu_shares: Option<u64>,
-
-        /// CPUs in which to allow execution (0-3, 0,1)
-        #[arg(long, value_name = "string")]
-        cpuset_cpus: Option<String>,
-
-        /// MEMs in which to allow execution (0-3, 0,1)
-        #[arg(long, value_name = "string")]
-        cpuset_mems: Option<String>,
-
-        /// Skip image verification (default true)
-        #[arg(long, action = ArgAction::SetTrue)]
-        disable_content_trust: bool,
-
-        /// Name of the Dockerfile (Default is 'PATH/Dockerfile')
-        #[arg(short = 'f', long, value_name = "string")]
-        file: Option<String>,
-
-        /// Always remove intermediate containers
-        #[arg(long, action = ArgAction::SetTrue)]
-        force_rm: bool,
-
-        /// Write the image ID to the file
-        #[arg(long, value_name = "string")]
-        iidfile: Option<String>,
-
-        /// Container isolation technology
-        #[arg(long, value_name = "string")]
-        isolation: Option<String>,
-
-        /// Set metadata for an image
-        #[arg(long, value_name = "list")]
-        label: Option<Vec<String>>,
-
-        /// Memory limit
-        #[arg(short = 'm', long, value_name = "bytes")]
-        memory: Option<String>,
-
-        /// Swap limit equal to memory plus swap: '-1' to enable unlimited swap
-        #[arg(long, value_name = "bytes")]
-        memory_swap: Option<String>,
-
-        /// Set the networking mode for the RUN instructions during build (default "default")
-        #[arg(long, value_name = "string")]
-        network: Option<String>,
-
-        /// Do not use cache when building the image
-        #[arg(long, action = ArgAction::SetTrue)]
-        no_cache: bool,
-
-        /// Always attempt to pull a newer version of the image
-        #[arg(long, action = ArgAction::SetTrue)]
-        pull: bool,
-
-        /// Suppress the build output and print image ID on success
-        #[arg(short = 'q', long, action = ArgAction::SetTrue)]
-        quiet: bool,
-
-        /// Remove intermediate containers after a successful build (default true)
-        #[arg(long, action = ArgAction::SetTrue)]
-        rm: bool,
-
-        /// Security options
-        #[arg(long, value_name = "strings")]
-        security_opt: Option<Vec<String>>,
-
-        /// Size of /dev/shm
-        #[arg(long, value_name = "bytes")]
-        shm_size: Option<String>,
-
-        /// Name and optionally a tag in the 'name:tag' format
-        #[arg(short = 't', long, value_name = "list")]
-        tag: Option<Vec<String>>,
-
-        /// Set the target build stage to build
-        #[arg(long, value_name = "string")]
-        target: Option<String>,
-
-        /// Ulimit options
-        #[arg(long, value_name = "ulimit")]
-        ulimit: Option<Vec<String>>,
+        
+        /// Build options
+        #[clap(flatten)]
+        options: image::BuildArgOptions,
     },
-    
+
 /// Remove one or more images
     Rmi {
         
         /// image to delete
         #[arg(required = true)]
-        image: [&str],
+        image: String,
         
         /// Force removal of the image                                                                 
         #[arg(short, long)]
@@ -350,66 +252,12 @@ async fn main() {
             }
         }
 
-        DockerCommand::Build {
-            path_or_url,
-            add_host,
-            build_arg,
-            cache_from,
-            cgroup_parent,
-            compress,
-            cpu_period,
-            cpu_quota,
-            cpu_shares,
-            cpuset_cpus,
-            cpuset_mems,
-            disable_content_trust,
-            file,
-            force_rm,
-            iidfile,
-            isolation,
-            label,
-            memory,
-            memory_swap,
-            network,
-            no_cache,
-            pull,
-            quiet,
-            rm,
-            security_opt,
-            shm_size,
-            tag,
-            target,
-            ulimit,
-        } => {
+        DockerCommand::Build {path_or_url, options} => {
             // 处理 `docker build` 的逻辑
             println!("Building image from path or URL: {}", path_or_url);
-            image::build(path_or_url).await;
+            let cloned_options = options.clone();
+            image::build(path_or_url, cloned_options).await;
 
-            if let Some(add_hosts) = add_host {
-                for host in add_hosts {
-                    println!("Adding custom host: {}", host);
-                }
-            }
-
-            if let Some(args) = build_arg {
-                for arg in args {
-                    println!("Using build argument: {}", arg);
-                }
-            }
-
-            if *compress {
-                println!("Compressing the build context.");
-            }
-
-            if * no_cache {
-                println!("Disabling cache during build.");
-            }
-
-            if let Some(tags) = tag {
-                for t in tags {
-                    println!("Tagging image as: {}", t);
-                }
-            }
         }
 
         DockerCommand::Ps { all } => {
@@ -433,11 +281,18 @@ async fn main() {
             container::handle_container_command(container_command).await;
         }
 
-        DockerCommand::Rm { force, container } => {
+        DockerCommand::Rm {container, force, volumes, link } => {
             println!("Removing container: {}", container);
             if *force {
                 println!("Forcing container removal");
             }
+            if let Some(somevolumes) = volumes {
+                println!("volumes:{}",  somevolumes);
+            }
+if let Some(link) = link {
+                println!("link:{}", link);
+            }
+
         }
 
 DockerCommand::Pull {
@@ -493,7 +348,7 @@ DockerCommand::Pull {
 
 DockerCommand::Rmi {image,  force, no_prune } => {
         // 处理 rmi 命令
-        image::rmi(image).await;
+        image::rmi(image.to_string()).await;
         if *force {
             println!("Force removal of the image.");
         }

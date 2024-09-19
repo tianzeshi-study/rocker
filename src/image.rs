@@ -1,15 +1,147 @@
 use futures::StreamExt;
-use shiplift::{BuildOptions, Docker};
+use shiplift::{
+    BuildOptions,
+    Docker
+};
+use shiplift::builder::BuildOptionsBuilder;
+use clap::{
+    Parser,
+    // ArgAction
+};
 
-pub async fn build(path: &str) {
+ # [derive(Parser, Debug, Clone)]
+pub struct BuildArgOptions {
+    /*
+    /// Add a custom host-to-IP mapping (host:ip)
+    #[arg(long, value_name = "list")]
+    add_host: Option<Vec<String>>,
+
+    /// Set build-time variables
+    #[arg(long, value_name = "list")]
+    build_arg: Option<Vec<String>>,
+
+    /// Images to consider as cache sources
+    #[arg(long, value_name = "strings")]
+    cache_from: Option<Vec<String>>,
+
+    /// Optional parent cgroup for the container
+    #[arg(long, value_name = "string")]
+    cgroup_parent: Option<String>,
+
+    /// Compress the build context using gzip
+    #[arg(long, action = ArgAction::SetTrue)]
+    compress: bool,
+
+    /// Limit the CPU CFS period
+    #[arg(long, value_name = "int")]
+    cpu_period: Option<u64>,
+
+    /// Limit the CPU CFS quota
+    #[arg(long, value_name = "int")]
+    cpu_quota: Option<u64>,
+
+    /// CPU shares (relative weight)
+    #[arg(short = 'c', long, value_name = "int")]
+    cpu_shares: Option<u64>,
+
+    /// CPUs in which to allow execution (0-3, 0,1)
+    #[arg(long, value_name = "string")]
+    cpuset_cpus: Option<String>,
+
+    /// MEMs in which to allow execution (0-3, 0,1)
+    #[arg(long, value_name = "string")]
+    cpuset_mems: Option<String>,
+
+    /// Skip image verification (default true)
+    #[arg(long, action = ArgAction::SetTrue)]
+    disable_content_trust: bool,
+
+    /// Name of the Dockerfile (Default is 'PATH/Dockerfile')
+    #[arg(short = 'f', long, value_name = "string")]
+    file: Option<String>,
+
+    /// Always remove intermediate containers
+    #[arg(long, action = ArgAction::SetTrue)]
+    force_rm: bool,
+
+    /// Write the image ID to the file
+    #[arg(long, value_name = "string")]
+    iidfile: Option<String>,
+
+    /// Container isolation technology
+    #[arg(long, value_name = "string")]
+    isolation: Option<String>,
+
+    /// Set metadata for an image
+    #[arg(long, value_name = "list")]
+    label: Option<Vec<String>>,
+
+    /// Memory limit
+    #[arg(short = 'm', long, value_name = "bytes")]
+    memory: Option<String>,
+
+    /// Swap limit equal to memory plus swap: '-1' to enable unlimited swap
+    #[arg(long, value_name = "bytes")]
+    memory_swap: Option<String>,
+
+    /// Set the networking mode for the RUN instructions during build (default "default")
+    #[arg(long, value_name = "string")]
+    network: Option<String>,
+
+    /// Do not use cache when building the image
+    #[arg(long, action = ArgAction::SetTrue)]
+    no_cache: bool,
+
+    /// Always attempt to pull a newer version of the image
+    #[arg(long, action = ArgAction::SetTrue)]
+    pull: bool,
+
+    /// Suppress the build output and print image ID on success
+    #[arg(short = 'q', long, action = ArgAction::SetTrue)]
+    quiet: bool,
+
+    /// Remove intermediate containers after a successful build (default true)
+    #[arg(long, action = ArgAction::SetTrue)]
+    rm: bool,
+
+    /// Security options
+    #[arg(long, value_name = "strings")]
+    security_opt: Option<Vec<String>>,
+
+    /// Size of /dev/shm
+    #[arg(long, value_name = "bytes")]
+    shm_size: Option<String>,
+     */
+    /// Name and optionally a tag in the 'name:tag' format
+     # [arg(short = 't', long, value_name = "list")]
+     tag: Option<String > ,
+    // tag: Option < Vec < String >> ,
+    /*
+    /// Set the target build stage to build
+    #[arg(long, value_name = "string")]
+    target: Option<String>,
+
+    /// Ulimit options
+    #[arg(long, value_name = "ulimit")]
+    ulimit: Option<Vec<String>>,
+     */
+}
+
+pub async fn build(path:  & str, build_options: BuildArgOptions) {
     let docker = Docker::new();
     // let path = env::args().nth(1).expect("You need to specify a path");
-let tag ="latest"; 
-
+    
+    let mut options: &mut BuildOptionsBuilder = &mut BuildOptions::builder(path);
+    // let mut options = BuildOptionsBuilder::new(path);
+    if let Some(tag) = build_options.tag{
     // let options = BuildOptions::builder(path).tag("shiplift_test").build();
-    let options = BuildOptions::builder(path).tag(tag).build();
+    // let options = BuildOptions::builder(path).tag(tag).build();
+    options = options.tag(tag);
+    } else {
+    }
+    let final_options: BuildOptions = options.build();
 
-    let mut stream = docker.images().build(&options);
+    let mut stream = docker.images().build( &final_options);
     while let Some(build_result) = stream.next().await {
         match build_result {
             Ok(output) => println!("{:?}", output),
@@ -18,13 +150,12 @@ let tag ="latest";
     }
 }
 
-pub async fn rmi(image: [&str]) {
+pub async fn rmi(image: String) {
     let docker = Docker::new();
     // let img = env::args().nth(1).expect("You need to specify an image name");
 
-    let img = image[0];
-    
-    match docker.images().get(&img).delete().await {
+    let img = image;
+    match docker.images().get( & img).delete().await {
         Ok(statuses) => {
             for status in statuses {
                 println!("{:?}", status);
