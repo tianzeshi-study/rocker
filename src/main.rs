@@ -1,7 +1,8 @@
 mod container;
 mod image;
+mod remote;
 
-use shiplift::{Docker, PullOptions, tty::TtyChunk};
+use shiplift::{Docker, tty::TtyChunk};
 use clap::{Parser, Subcommand};
 use futures::StreamExt;
 // use std::env;
@@ -22,17 +23,16 @@ enum DockerCommand {
         /// Image to run
         image: String,
 
-        /// Name of the container
-        #[arg(short, long)]
-        name: Option<String>,
+        /// Command  to run
+        command: Option<String>,
+        
+        /// Arguments of command  
+        arguments: Option<Vec<String>>,
+        
+        /// run options
+        #[clap(flatten)]
+        options: container::RunArgOptions,
 
-        /// Publish container's port(s) to the host
-        #[arg(short = 'p', long)]
-        port: Option<String>,
-
-        /// Run container in the background and print container ID
-        #[arg(short, long)]
-        detach: bool,
     },
 
 
@@ -117,6 +117,10 @@ enum DockerCommand {
     #[command(subcommand)]
     Container(container::ContainerCommand),
     
+    /// Manage images
+    #[command(subcommand)]
+    Image(image::ImageCommand),
+    
     /// Build an image from a Dockerfile
     Build {
         /// Path to the context directory or URL for the build
@@ -129,9 +133,8 @@ enum DockerCommand {
         options: image::BuildArgOptions,
     },
 
-/// Remove one or more images
+    /// Remove one or more images
     Rmi {
-        
         /// image to delete
         #[arg(required = true)]
         image: String,
@@ -144,9 +147,11 @@ enum DockerCommand {
         #[arg(long)]
         no_prune: bool,
     },
-    }
-
-
+    
+    /// Run  remote command 
+    #[command(subcommand)]
+    Remote(remote::RemoteCommand),
+}
 async fn images() {
     let docker = Docker::new();
     println!("docker images in stock");
@@ -168,28 +173,6 @@ async fn images() {
     }
 }
 
-
-async fn pull(name: String) {
-    // env_logger::init();
-    let docker = Docker::new();
-    // let img = env::args().nth(1).expect("You need to specify an image name");
-    let hub = "hub.aiursoft.cn/".to_string();
-    // cndocker 
-    let img = hub+&name;
-    // rocker
-    // let img = name;
-
-    let mut stream = docker
-        .images()
-        .pull(&PullOptions::builder().image(img).build());
-
-    while let Some(pull_result) = stream.next().await {
-        match pull_result {
-            Ok(output) => println!("{:?}", output),
-            Err(e) => eprintln!("Error: {}", e),
-        }
-    }
-}
 
 async fn attach(id: String) -> Result<(), Box<dyn std::error::Error>> {
     let docker = Docker::new();
@@ -236,20 +219,12 @@ async fn main() {
     match &cli.command {
         DockerCommand::Run {
             image,
-            name,
-            port,
-            detach,
+            command,
+            arguments,
+            options,
         } => {
             println!("Running container with image: {}", image);
-            if let Some(name) = name {
-                println!("Container name: {}", name);
-            }
-            if let Some(port) = port {
-                println!("Port mapping: {}", port);
-            }
-            if *detach {
-                println!("Running in detached mode");
-            }
+            container::create(image, options.clone()).await;
         }
 
         DockerCommand::Build {path_or_url, options} => {
@@ -280,6 +255,10 @@ async fn main() {
         DockerCommand::Container(container_command) => {
             container::handle_container_command(container_command).await;
         }
+        
+        DockerCommand::Image(image_command) => {
+            image::handle_image_command(image_command).await;
+        }
 
         DockerCommand::Rm {container, force, volumes, link } => {
             println!("Removing container: {}", container);
@@ -303,7 +282,7 @@ DockerCommand::Pull {
             quiet,
         } => {
             println!("Pulling image: {}", name);
-            pull(name.to_string()).await;
+            image::pull(name.to_string()).await;
             if *all_tags {
                 println!("Downloading all tags...");
             }
@@ -356,5 +335,10 @@ DockerCommand::Rmi {image,  force, no_prune } => {
             println!("Do not delete untagged parents.");
         }
     }
+    
+    DockerCommand::Remote (remote_command) => {
+        // println!("executing  command");
+        remote::handle_remote_command(remote_command).await;
+}
 }
 }

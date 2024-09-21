@@ -1,21 +1,16 @@
-use futures::StreamExt;
-use shiplift::{
-    tty::TtyChunk, 
-    LogsOptions,
-    errors::Error,
-    Docker,
-    ContainerListOptions,
-    ContainerOptions,
-    builder::ContainerOptionsBuilder,
-};
+use reqwest::Client;
+use serde::{Serialize, Deserialize};
+use std::error::Error;
+use std::fs;
+// use std::io::Result;
 use clap::{
     Parser,
     Subcommand
 };
-use std::{fs::OpenOptions, io::Write};
+
 
  # [derive(Subcommand, Debug)]
-pub enum ContainerCommand {
+pub enum RemoteCommand {
     /// Attach local standard input, output, and error streams to a running container
     Attach {
         /// Container name or ID
@@ -85,7 +80,11 @@ pub enum ContainerCommand {
         container: String,
 
         /// Command to execute
-        command: String,
+        command: Option<String>,
+        
+        ///  Single file to  read
+#[arg(short, long)]
+file_path: Option<String>,
     },
 
     /// Export a container's filesystem as a tar archive
@@ -212,9 +211,9 @@ pub enum ContainerCommand {
     },
 }
 
-pub async fn handle_container_command(command: &ContainerCommand) {
+pub async fn handle_remote_command(command: &RemoteCommand) {
     match command {
-            ContainerCommand::Attach {
+            RemoteCommand::Attach {
                 container,
                 detach_keys,
                 no_stdin,
@@ -226,7 +225,7 @@ pub async fn handle_container_command(command: &ContainerCommand) {
                     container, detach_keys, no_stdin, sig_proxy);
                 // 在这里处理 Attach 逻辑
             }
-            ContainerCommand::Commit {
+            RemoteCommand::Commit {
                 container,
                 repository,
                 message,
@@ -237,7 +236,7 @@ pub async fn handle_container_command(command: &ContainerCommand) {
                     container, repository, message);
                 // 在这里处理 Commit 逻辑
             }
-            ContainerCommand::Cp {
+            RemoteCommand::Cp {
                 src,
                 dest
             }
@@ -245,46 +244,52 @@ pub async fn handle_container_command(command: &ContainerCommand) {
                 println!("Copying from {} to {}", src, dest);
                 // 在这里处理 Cp 逻辑
             }
-            ContainerCommand::Create {
+            RemoteCommand::Create {
             image,
             command,
             arguments,
             options,
         } => {
             println!("Running container with image: {}", image);
-            create(image, options.clone()).await;
+            // create(image, options.clone()).await;
         }
 
-            ContainerCommand::Diff {
+            RemoteCommand::Diff {
                 container
             }
              => {
                 println!("Inspecting changes to container: {}", container);
                 // 在这里处理 Diff 逻辑
             }
-            ContainerCommand::Exec {
+            RemoteCommand::Exec {
                 container,
-                command
+                command,
+                file_path,
             }
              => {
+                 if let Some(file_path) = file_path {
+                     let file_content = fs::read_to_string(file_path).unwrap();
+                     println!("executing {} in container", file_path);
+                    exec(container.to_string(), file_content).await;
+                } else {
+                    if let Some(command) = command.clone() {
                 println!("Executing command '{}' in container: {}", command, container);
                 // 在这里处理 Exec 逻辑
+                // let _ =exec(container.to_string(),command.to_string()).await;
+                // let _ =exec(container.to_string(),command.to_string(), file_path.clone()).await;
+                // match  exec(container.to_string(),command.to_string(), file_path.clone()).await {
+                match  exec(container.to_string(),command.to_string()).await {
+                    Ok(()) => println!("ok"),
+                    Err(e) => eprintln!("{}", e),
+                }
+                } else {
+                    println!("command or code needed!");
+                }
+                 }
             }
-            ContainerCommand::Logs {
-                container,
-            }
-             => {
-                println!("Get logs of container: {}", container);
-logs(container.to_string()).await;
-            }
-            // 可以继续添加其他命令的处理逻辑
-            ContainerCommand::Export {
-                container,
-            }
-             => {
-                // println!("exporting container '{:?}' : {}", command, container);
-                export(container.to_string()).await;
-            }
+            RemoteCommand:: Ls => ls().await,
+// 可以继续添加其他命令的处理逻辑
+
 
             _ => println!("Command not implemented yet."),
     }
@@ -631,101 +636,64 @@ pub struct RunArgOptions {
 }
 
 
-pub async fn ps() {
-    // env_logger::init();
-    let docker = Docker::new();
-    match docker.containers().list( & ContainerListOptions::default ()).await {
-            Ok(containers) => {
-                for c in containers {
-                    println!("container -> {:#?}", c)
-                }
-            }
-            Err(e) => eprintln!("Error: {}", e),
-        }
-    }
 
-pub async fn create(image: &str, options: RunArgOptions) {
-    let docker = Docker::new();
-    let mut builder: &mut ContainerOptionsBuilder = &mut ContainerOptions::builder(image.as_ref());
-    if let Some(name) = options.name {
-        builder = builder.name(&name);
-    }
-    if let Some(workdir) = options.workdir{
-        builder = builder.working_dir(&workdir);
-    }
-    if let Some(volume) = options.volume{
-        let volumes: Vec<&str> = volume.iter().map(|s| s.as_str()).collect();
-        // println!("volumes:{:?}", volumes);
-        // let volumes = vec![volume.as_str()]; 
-        builder = builder.volumes(volumes);
-    }
-    if options.publish_all {
-        builder = builder.publish_all_ports();
-    }
-
-    let container_options = builder.build();
-    
-    match docker
-        .containers()
-        .create(&container_options)
-        .await
-    {
-        Ok(info) => println!("{:?}", info),
-        Err(e) => eprintln!("Error: {}", e),
-    }
+#[derive(Serialize, Deserialize)]
+struct ResponseData {
+    #[serde(rename = "resultCode")]
+    result_code: i32,
+    output: String,
+    error: String,
 }
 
-pub async fn export(id: String) {
-    let docker = Docker::new();
-    // /* let id = env::args().nth(1).expect("You need to specify an image id"); */
+pub async fn exec(container: String, code: String) -> Result<(), Box<dyn Error>> {
+// pub async fn exec(container: String, code: String, file_path: Option<String>) -> Result<(), Box<dyn Error>> {
+    let client = Client::new();
 
-    let mut export_file = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open(format!("{}.tar", &id))
-        .unwrap();
-        
-    // while let Some(export_result) = docker.containers().get(&id).export().next().await {
-    while let Some(export_result) = docker.images().get(&id).export().next().await {
-        match export_result.and_then(|bytes| export_file.write(&bytes).map_err(Error::from)) {
-            // Ok(n) => println!("copied {} bytes", n),
-            Ok(n) => println!("copied bytes"),
-            Err(e) => eprintln!("Error: {}", e),
-        }
-    }
+    // let url = "https://cpprunner.aiursoft.cn/runner/run?lang=rust";
+    let url = format!("https://cpprunner.aiursoft.cn/runner/run?lang={}", container);
+    // let code = r#"fn main() { println!("hello world"); }"#;
+    // let code = command.clone();
+
+    let response = client
+        .post(url)
+        .header("Content-Type", "text/plain")
+        .body(code)
+        .send()
+        .await?;
+
+    let body = response.text().await?;
+    // println!("Response: {}", body);
+    // 反序列化 JSON 响应为 ResponseData 结构体
+    let response_data: ResponseData = serde_json::from_str(&body)?;
+
+    // 打印反序列化后的数据
+    // println!("{:#}", response_data);
+    println!("{}", response_data.result_code);
+    println!("{}", response_data.output);
+    println!("{}", response_data.error);
+
+    Ok(())
 }
 
-// pub async fn start(id: String) {
-    // let docker = Docker::new();
-// let container = docker.container::new(&id);
-    /* match docker.containers().start().await {*/
-        // match.container.start() {
-            // Ok(containers) => println!("starting  Container"),
-            // Err(e) => eprintln!("Error: {}", e),
-        // }
-    // }
-
-async fn logs(id: String) {
-    let docker = Docker::new();
-    // let id = env::args().nth(1).expect("You need to specify a container id");
-
-    let mut logs_stream = docker
-        .containers()
-        .get(&id)
-        .logs(&LogsOptions::builder().stdout(true).stderr(true).build());
-
-    while let Some(log_result) = logs_stream.next().await {
-        match log_result {
-            Ok(chunk) => print_chunk(chunk),
-            Err(e) => eprintln!("Error: {}", e),
-        }
-    }
-}
-
-fn print_chunk(chunk: TtyChunk) {
-    match chunk {
-        TtyChunk::StdOut(bytes) => println!("Stdout: {}", std::str::from_utf8(&bytes).unwrap()),
-        TtyChunk::StdErr(bytes) => eprintln!("Stdout: {}", std::str::from_utf8(&bytes).unwrap()),
-        TtyChunk::StdIn(_) => unreachable!(),
-    }
+async fn ls() {
+    println!("C (gcc 9.5.0)");
+println!("C++ (GNU G++, stdc++20)");
+println!("CUDA 11.6 (on Ubuntu 20.04)");
+println!("C# (.NET 7.0)");
+println!("Go (Golang 1.21.5)");
+println!("Rust (1.74.1)");
+println!("Javascript (Node.js v21)");
+println!("TypeScript (4.9.3, node 16.8.1)");
+println!("Python (CPython 3.11)");
+println!("Python with PyTorch (Pytorch 2.3.0; cuda 11.8; cudnn 8)");
+println!("Bash (on Ubuntu 24.04)");
+println!("PowerShell Core (Ubuntu 22.04)");
+println!("Swift (5.8.1)");
+println!("Java (OpenJDK 23)");
+println!("Ruby (3.2.2)");
+println!("PHP (8.3.0)");
+println!("Perl (5.39.5)");
+println!("Lua (5.4)");
+println!("Haskell (GHC 9.8.1)");
+println!("Lisp (rigetti/lisp)");
 }
