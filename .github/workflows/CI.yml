@@ -62,7 +62,7 @@ jobs:
       - name: manually    build wheels 
         run: |
           sudo apt  install -y python3-pip
-          python3-pip  install maturin
+          python3 -m pip  install maturin
           maturin build --release --out dist
       - name: Upload wheels
         uses: actions/upload-artifact@v4
