@@ -51,13 +51,14 @@ jobs:
           python3-distutils python3-setuptools python3-dev rsync subversion \
           swig time xsltproc zlib1g-dev
       - name: Build wheels
-        run: sudo apt update && sudo apt install -y libssl-dev Openssl
+        # run: sudo apt update && sudo apt install -y libssl-dev Openssl
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
           sccache: 'true'
           manylinux: auto
+          container: off
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -98,6 +99,7 @@ jobs:
           args: --release --out dist
           sccache: 'true'
           manylinux: musllinux_1_2
+          container: off
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -124,6 +126,7 @@ jobs:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
           sccache: 'true'
+          container: off
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
