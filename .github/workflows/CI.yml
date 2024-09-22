@@ -51,6 +51,7 @@ jobs:
           python3-distutils python3-setuptools python3-dev rsync subversion \
           swig time xsltproc zlib1g-dev
       - name: Build wheels
+        run: sudo apt update && sudo apt install -y libssl-dev Openssl
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
