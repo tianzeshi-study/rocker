@@ -9,116 +9,115 @@ use shiplift::{
 use clap::{
     Parser,
     // ArgAction
-    Subcommand, 
+    Subcommand,
 };
-
 
  # [derive(Subcommand, Debug)]
 pub enum ImageCommand {
-///Build an image from a Dockerfile                                                               
-Build {},
-///       Show the history of an image                                                                  
-History {},
-///  Import the contents from a tarball to create a filesystem image                                 
-Import {}      ,
-///       Display detailed information on one or more images                                            
-Inspect {},
-///          Load an image from a tar archive or STDIN                                                       
-Load {},
-///           List images                                                                                     
-Ls {},
-///        Remove unused images                                                                           
-Prune {},
-///          Pull an image or a repository from a registry                                                  
-Pull {},
-///         Push an image or a repository to a registry                                                     
-Push {},
-///           Remove one or more images                                                                       
-Rm {} ,
-/// Save one or more images to a tar archive (streamed to STDOUT by default)                        
-Save {},
-/// Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE
-Tag {},
+    ///Build an image from a Dockerfile
+    Build {},
+    ///       Show the history of an image
+    History {},
+    ///  Import the contents from a tarball to create a filesystem image
+    Import {},
+    ///       Display detailed information on one or more images
+    Inspect {},
+    ///          Load an image from a tar archive or STDIN
+    Load {},
+    ///           List images
+    Ls {},
+    ///        Remove unused images
+    Prune {},
+    ///          Pull an image or a repository from a registry
+    Pull {},
+    ///         Push an image or a repository to a registry
+    Push {},
+    ///           Remove one or more images
+    Rm {},
+    /// Save one or more images to a tar archive (streamed to STDOUT by default)
+    Save {},
+    /// Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE
+    Tag {},
 }
 
-pub async fn handle_image_command(command: &ImageCommand) {
+pub async fn handle_image_command(command:  & ImageCommand) {
     /*
     match command {
-            ContainerCommand::Attach {
-                container,
-                detach_keys,
-                no_stdin,
-                sig_proxy,
-            }
-             => {
-                println!(
-                    "Attaching to container: {} (detach_keys: {:?}, no_stdin: {}, sig_proxy: {})",
-                    container, detach_keys, no_stdin, sig_proxy);
-                // 在这里处理 Attach 逻辑
-            }
-            ContainerCommand::Commit {
-                container,
-                repository,
-                message,
-            }
-             => {
-                println!(
-                    "Committing container: {} (repository: {:?}, message: {:?})",
-                    container, repository, message);
-                // 在这里处理 Commit 逻辑
-            }
-            ContainerCommand::Cp {
-                src,
-                dest
-            }
-             => {
-                println!("Copying from {} to {}", src, dest);
-                // 在这里处理 Cp 逻辑
-            }
-            ContainerCommand::Create {
-            image,
-            command,
-            arguments,
-            options,
-        } => {
-            println!("Running container with image: {}", image);
-            create(image, options.clone()).await;
-        }
-
-            ContainerCommand::Diff {
-                container
-            }
-             => {
-                println!("Inspecting changes to container: {}", container);
-                // 在这里处理 Diff 逻辑
-            }
-            ContainerCommand::Exec {
-                container,
-                command
-            }
-             => {
-                println!("Executing command '{}' in container: {}", command, container);
-                // 在这里处理 Exec 逻辑
-            }
-            ContainerCommand::Logs {
-                container,
-            }
-             => {
-                println!("Get logs of container: {}", container);
-logs(container.to_string()).await;
-            }
-            // 可以继续添加其他命令的处理逻辑
-            ContainerCommand::Export {
-                container,
-            }
-             => {
-                // println!("exporting container '{:?}' : {}", command, container);
-                export(container.to_string()).await;
-            }
-
-            _ => println!("Command not implemented yet."),
+    ContainerCommand::Attach {
+    container,
+    detach_keys,
+    no_stdin,
+    sig_proxy,
     }
-*/
+    => {
+    println!(
+    "Attaching to container: {} (detach_keys: {:?}, no_stdin: {}, sig_proxy: {})",
+    container, detach_keys, no_stdin, sig_proxy);
+    // 在这里处理 Attach 逻辑
+    }
+    ContainerCommand::Commit {
+    container,
+    repository,
+    message,
+    }
+    => {
+    println!(
+    "Committing container: {} (repository: {:?}, message: {:?})",
+    container, repository, message);
+    // 在这里处理 Commit 逻辑
+    }
+    ContainerCommand::Cp {
+    src,
+    dest
+    }
+    => {
+    println!("Copying from {} to {}", src, dest);
+    // 在这里处理 Cp 逻辑
+    }
+    ContainerCommand::Create {
+    image,
+    command,
+    arguments,
+    options,
+    } => {
+    println!("Running container with image: {}", image);
+    create(image, options.clone()).await;
+    }
+
+    ContainerCommand::Diff {
+    container
+    }
+    => {
+    println!("Inspecting changes to container: {}", container);
+    // 在这里处理 Diff 逻辑
+    }
+    ContainerCommand::Exec {
+    container,
+    command
+    }
+    => {
+    println!("Executing command '{}' in container: {}", command, container);
+    // 在这里处理 Exec 逻辑
+    }
+    ContainerCommand::Logs {
+    container,
+    }
+    => {
+    println!("Get logs of container: {}", container);
+    logs(container.to_string()).await;
+    }
+    // 可以继续添加其他命令的处理逻辑
+    ContainerCommand::Export {
+    container,
+    }
+    => {
+    // println!("exporting container '{:?}' : {}", command, container);
+    export(container.to_string()).await;
+    }
+
+    _ => println!("Command not implemented yet."),
+    }
+     */
 }
 
  # [derive(Parser, Debug, Clone)]
@@ -226,7 +225,7 @@ pub struct BuildArgOptions {
      */
     /// Name and optionally a tag in the 'name:tag' format
      # [arg(short = 't', long, value_name = "list")]
-     tag: Option<String > ,
+    tag: Option < String > ,
     // tag: Option < Vec < String >> ,
     /*
     /// Set the target build stage to build
@@ -242,18 +241,18 @@ pub struct BuildArgOptions {
 pub async fn build(path:  & str, build_options: BuildArgOptions) {
     let docker = Docker::new();
     // let path = env::args().nth(1).expect("You need to specify a path");
-    
-    let mut options: &mut BuildOptionsBuilder = &mut BuildOptions::builder(path);
+
+    let mut options:  & mut BuildOptionsBuilder =  & mut BuildOptions::builder(path);
     // let mut options = BuildOptionsBuilder::new(path);
-    if let Some(tag) = build_options.tag{
-    // let options = BuildOptions::builder(path).tag("shiplift_test").build();
-    // let options = BuildOptions::builder(path).tag(tag).build();
-    options = options.tag(tag);
-    } else {
+    if let Some(tag) = build_options.tag {
+        // let options = BuildOptions::builder(path).tag("shiplift_test").build();
+        // let options = BuildOptions::builder(path).tag(tag).build();
+        options = options.tag(tag);
     }
+    else {}
     let final_options: BuildOptions = options.build();
 
-    let mut stream = docker.images().build( &final_options);
+    let mut stream = docker.images().build( & final_options);
     while let Some(build_result) = stream.next().await {
         match build_result {
             Ok(output) => println!("{:?}", output),
@@ -282,15 +281,14 @@ pub async fn pull(name: String) {
     let docker = Docker::new();
     // let img = env::args().nth(1).expect("You need to specify an image name");
     let hub = "hub.aiursoft.cn/".to_string();
-    // cndocker 
-    let img = hub+&name;
+    // cndocker
+    let img = hub +  & name;
     // rocker
     // let img = name;
 
     let mut stream = docker
         .images()
-        .pull(&PullOptions::builder().image(img).build());
-
+        .pull( & PullOptions::builder().image(img).build());
     while let Some(pull_result) = stream.next().await {
         match pull_result {
             Ok(output) => println!("{:?}", output),
@@ -298,4 +296,3 @@ pub async fn pull(name: String) {
         }
     }
 }
-
