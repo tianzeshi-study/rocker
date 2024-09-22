@@ -60,7 +60,7 @@ jobs:
           # container: off
           # before-script-linux: sudo apt update && sudo apt install openssl libssl-dev -y && echo openssl && echo $OPENSSL_DIR && whereis openssl && export OPENSSL_DIR=/usr/bin/ 
       - name: manually    build wheels 
-        run |
+        run: |
           python3-pip  install maturin
           maturin build --release --out dist
       # - name: Upload wheels
