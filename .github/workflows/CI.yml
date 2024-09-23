@@ -130,7 +130,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Install OpenSSL
-        run: choco install openssl
+        run: choco install openssl openssl.light
       # - name: Build wheels
         # uses: PyO3/maturin-action@v1
         # with:
@@ -141,7 +141,7 @@ jobs:
 
       - name: manually    build wheels 
         run: |
-          choco install python3 openssl libssl-dev
+          choco install python3 openssl openssl.light
           python -m pip  install maturin
           maturin build --release --out dist
  
