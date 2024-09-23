@@ -117,40 +117,6 @@ jobs:
           name: wheels-musllinux-${{ matrix.platform.target }}
           path: dist
 
-  windows:
-    runs-on: ${{ matrix.platform.runner }}
-    strategy:
-      matrix:
-        platform:
-          - runner: windows-latest
-            target: x64
-          - runner: windows-latest
-            target: x86
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Install OpenSSL
-        run: choco install openssl openssl.light
-      # - name: Build wheels
-        # uses: PyO3/maturin-action@v1
-        # with:
-          # target: ${{ matrix.platform.target }}
-          # args: --release --out dist
-          # sccache: 'true'
-          # container: off
-
-      - name: manually    build wheels 
-        run: |
-          choco install python3 openssl openssl.light
-          python -m pip  install maturin
-          maturin build --release --out dist
- 
-      - name: Upload wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-windows-${{ matrix.platform.target }}
-          path: dist
-
   macos:
     runs-on: ${{ matrix.platform.runner }}
     strategy:
