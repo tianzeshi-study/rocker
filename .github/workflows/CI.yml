@@ -141,7 +141,7 @@ jobs:
 
       - name: manually    build wheels 
         run: |
-          choco install python3.11
+          choco install python3.11 openssl
           python -m pip  install maturin
           maturin build --release --out dist
  
