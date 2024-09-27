@@ -242,15 +242,9 @@ async fn main() {
             all
         }
          => {
-            if  * all {
-                println!("Listing all containers");
-            }
-        else {
-            println!("Listing running containers");
-            container::ps().await;
+            println!("Listing containers");
+            container::ps(all.clone()).await;
         }
-    }
-
     DockerCommand::Images {
         all
     }

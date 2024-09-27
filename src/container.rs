@@ -119,7 +119,11 @@ pub enum ContainerCommand {
     },
 
     /// List containers
-    Ls,
+    Ls {
+        /// Show all containers (default shows just running)
+         # [arg(short, long)]
+        all: bool,
+    },
 
     /// Pause all processes within one or more containers
     Pause {
@@ -311,6 +315,9 @@ pub async fn handle_container_command(command:  & ContainerCommand) {
          => {
             println!("stopping container: {}", container);
             stop(container.to_string(), time.clone()).await;
+        }
+        ContainerCommand::Ls {all} =>{
+            ps(all.clone()).await;
         }
 
         _ => println!("Command not implemented yet."),
@@ -657,10 +664,19 @@ pub struct RunArgOptions {
     workdir: Option < String >
 }
 
-pub async fn ps() {
-    // env_logger::init();
+pub async fn ps(all: bool) {
     let docker = Docker::new();
-    match docker.containers().list( & ContainerListOptions::default ()).await {
+    // let ps_filter =ContainerFilter {}   
+    // let mut builder = ContainerListOptions::builder().filter(ps_filter);
+    let mut builder  = &mut ContainerListOptions::builder();
+    if all{
+        builder = builder.all();
+    }
+    let ps_options = builder.build();
+
+    // let ps_all = builder.build();
+    // match docker.containers().list( & ContainerListOptions::default ()).await {
+    match docker.containers().list( &ps_options).await {
             Ok(containers) => {
                 for c in containers {
                     println!("container -> {:#?}", c)
