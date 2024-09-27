@@ -7,6 +7,7 @@ use shiplift::{
     ContainerListOptions,
     ContainerOptions,
     builder::ContainerOptionsBuilder,
+    ExecContainerOptions,
 };
 use clap::{
     Parser,
@@ -17,6 +18,7 @@ use std::{
     io::Write,
     time::Duration
 };
+use std::{env, str::from_utf8};
 
  # [derive(Subcommand, Debug)]
 pub enum ContainerCommand {
@@ -89,7 +91,7 @@ pub enum ContainerCommand {
         container: String,
 
         /// Command to execute
-        command: String,
+        command: Vec<String>,
     },
 
     /// Export a container's filesystem as a tar archive
@@ -275,7 +277,8 @@ pub async fn handle_container_command(command:  & ContainerCommand) {
             command
         }
          => {
-            println!("Executing command '{}' in container: {}", command, container);
+            println!("Executing command '{:?}' in container: {}", command, container);
+            exec(container.to_string(), command.clone()).await;
             // 在这里处理 Exec 逻辑
         }
         ContainerCommand::Logs {
@@ -774,3 +777,54 @@ pub async fn ps() {
             TtyChunk::StdIn(_) => unreachable!(),
         }
     }
+
+pub async fn run1(image:  & str, options: RunArgOptions) {
+        let docker = Docker::new();
+        let mut builder:  & mut ContainerOptionsBuilder =  & mut ContainerOptions::builder(image.as_ref());
+        if let Some(name) = options.name {
+            builder = builder.name( & name);
+        }
+        if let Some(workdir) = options.workdir {
+            builder = builder.working_dir( & workdir);
+        }
+        if let Some(volume) = options.volume {
+            let volumes: Vec <  & str >  = volume.iter().map( | s | s.as_str()).collect();
+            // println!("volumes:{:?}", volumes);
+            // let volumes = vec![volume.as_str()];
+            builder = builder.volumes(volumes);
+        }
+        if options.publish_all {
+            builder = builder.publish_all_ports();
+        }
+
+        let container_options = builder.build();
+
+        match docker
+        .containers()
+        .create( & container_options)
+        .await{
+            Ok(info) => println!("{:?}", info),
+            Err(e) => eprintln!("Error: {}", e),
+        }
+    }
+
+async fn exec(id: String, command: Vec<String>) {
+    let docker = Docker::new();
+    let command  = command.iter().map(|s| s.as_str()).collect();
+
+    // let options = ExecContainerOptions::builder().cmd(vec!["bash","-c","echo -n \"echo VAR=$VAR on stdout\"; echo -n \"echo VAR=$VAR on stderr\" >&2",])
+    let options = ExecContainerOptions::builder().cmd(command)
+        .env(vec!["VAR=value"])
+        .attach_stdout(true)
+        .attach_stderr(true)
+        .build();
+
+    let mut exec_stream = docker.containers().get(&id).exec(&options);
+
+for exec_result in exec_stream.next().await {
+    match exec_result {
+        Ok(chunk) => print_chunk(chunk),
+        Err(e) => eprintln!("Error: {}", e),
+        }
+    }
+}
