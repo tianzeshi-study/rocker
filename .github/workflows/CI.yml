@@ -28,26 +28,6 @@ jobs:
             target: x86_64
           - runner: ubuntu-24.04
             target: x86
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.target }}
-          args: --release --out dist --find-interpreter ${{ steps.is-openssl-vendored.outputs.enabled }}
-          manylinux: auto
-          before-script-linux: yum update -y && yum install -y openssl openssl-devel perl-IPC-Cmd
-      - name: Upload wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-linux-${{ matrix.platform.target }}
-          path: dist
-
-  linux_apt:
-    runs-on: ${{ matrix.platform.runner }}
-    strategy:
-      matrix:
-        platform:
           - runner: ubuntu-latest
             target: aarch64
           - runner: ubuntu-latest
@@ -56,6 +36,7 @@ jobs:
             target: s390x
           - runner: ubuntu-latest
             target: ppc64le
+
     steps:
       - uses: actions/checkout@v4
       - name: Build wheels
@@ -64,16 +45,12 @@ jobs:
           target: ${{ matrix.target }}
           args: --release --out dist --find-interpreter ${{ steps.is-openssl-vendored.outputs.enabled }}
           manylinux: auto
-          # before-script-linux: apt update -y && apt  install -y  openssl-dev  -y && cpan IPC::Cmd
           before-script-linux: yum update -y && yum install -y openssl openssl-devel perl-IPC-Cmd
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
           name: wheels-linux-${{ matrix.platform.target }}
           path: dist
-
-
-
 
   musllinux:
     runs-on: ${{ matrix.platform.runner }}
