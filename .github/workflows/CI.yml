@@ -43,6 +43,7 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
+          before-script-linux: apt update && apt install libipc-run-perl/jammy  libipc-run-safehandles-perl
           # sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: auto
       - name: Upload wheels
