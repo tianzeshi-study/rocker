@@ -39,11 +39,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build wheels
-        uses: PyO3/maturin-action@v1
+        # uses: PyO3/maturin-action@v1
+        uses: messense/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
-          before-script-linux: /bin/bash -c "cpan IPC::Cmd"
+          # before-script-linux: /bin/bash -c "cpan IPC::Cmd"
           # sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: auto
       - name: Upload wheels
